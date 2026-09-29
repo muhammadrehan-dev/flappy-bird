@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f7ef">
+  <title>Flappy Bird · A little arcade break</title>
+  <style>
+    :root { color-scheme: light; --ink: #223b39; --muted: #72817b; --paper: #f7f7ef; --green: #25725e; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: ui-rounded, "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif; }
+    body::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .28; background-image: radial-gradient(#a9b9ab .75px, transparent .75px); background-size: 18px 18px; }
+    button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, .stage:focus-visible { outline: 3px solid #d49d37; outline-offset: 5px; }
+    button:disabled { opacity: .35; cursor: default; }
+    .shell { position: relative; max-width: 1080px; margin: auto; padding: 28px 36px 24px; }
+    .site-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 27px; border-bottom: 1px solid #dce2d6; }
+    .brand { display: flex; gap: 10px; align-items: center; font-size: 16px; font-weight: 800; letter-spacing: -.5px; }
+    .brand-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: var(--green); color: #fff7cd; }
+    .brand-mark svg { width: 23px; height: 23px; }
+    .edition { font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+    main { display: grid; grid-template-columns: minmax(250px, 1fr) minmax(340px, 460px); align-items: center; gap: 64px; padding: 36px 0; }
+    .eyebrow { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 2px; font-weight: 800; text-transform: uppercase; color: var(--green); }
+    .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #e3b855; }
+    h1 { font-size: clamp(58px, 7vw, 88px); line-height: .95; letter-spacing: -5px; margin: 24px 0; font-weight: 900; }
+    h1 span { display: block; color: var(--green); }
+    .intro { font-family: system-ui, sans-serif; color: #6c7b74; font-size: 16px; line-height: 1.75; margin: 0; max-width: 295px; }
+    .rule { width: 42px; height: 3px; background: #d5dfca; margin: 32px 0 27px; border-radius: 2px; }
+    .how-title { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 17px; }
+    .controls { display: grid; gap: 13px; }
+    .control-row { display: flex; align-items: center; gap: 14px; font-size: 12px; color: #748078; }
+    .keys { display: flex; align-items: center; gap: 5px; min-width: 89px; }
+    kbd { display: inline-grid; place-items: center; height: 29px; min-width: 29px; padding: 0 9px; border: 1px solid #d7dfd3; border-bottom-width: 3px; border-radius: 7px; font: 11px system-ui, sans-serif; background: #fffff9; color: #43594e; }
+    .small-note { margin-top: 35px; font-size: 11px; color: #829084; display: flex; align-items: center; gap: 7px; }
+    .small-note svg { width: 15px; height: 15px; }
+    .game-card { border: 1px solid #c7d5c8; border-radius: 25px; background: #fffef7; padding: 10px; box-shadow: 0 22px 60px -28px #45665370, 0 3px 0 #d9e2d2; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px 17px; }
+    .scores { display: flex; align-items: center; gap: 19px; }
+    .score-item { display: flex; flex-direction: column; gap: 3px; }
+    .score-label { font-size: 8px; letter-spacing: 1.8px; color: #809184; font-weight: bold; }
+    .score-value { font-size: 25px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+    .score-item + .score-item { border-left: 1px solid #e3e8dc; padding-left: 18px; }
+    .score-item + .score-item .score-value { color: #82957e; }
+    .tools { display: flex; gap: 6px; }
+    .icon-button { width: 35px; height: 35px; border: 1px solid #e0e6d9; border-radius: 10px; color: #557164; background: #f5f7ef; display: grid; place-items: center; transition: background .15s, transform .15s; }
+    .icon-button:hover:enabled { background: #e7efdf; transform: translateY(-1px); }
+    .icon-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .stage { position: relative; width: 100%; aspect-ratio: 3 / 4; border-radius: 17px; overflow: hidden; background: #c1e9e6; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; }
+    canvas { display: block; width: 100%; height: 100%; }
+    .location-tag { position: absolute; top: 19px; left: 19px; font-size: 8px; letter-spacing: 2px; color: #507d78; font-weight: bold; pointer-events: none; }
+    .state-tag { position: absolute; top: 16px; right: 15px; display: flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid #ffffff80; border-radius: 30px; background: #ffffff45; font-size: 8px; letter-spacing: 1px; color: #497267; pointer-events: none; }
+    .state-tag::before { content: ""; width: 4px; height: 4px; background: #609d71; border-radius: 50%; }
+    .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 22px; }
+    .panel { width: 100%; max-width: 308px; padding: 25px 24px 20px; text-align: center; border: 1px solid #ffffff; border-radius: 22px; background: #fffef5f5; box-shadow: 0 12px 32px #4c79631c; transform: translateY(24px); }
+    .panel-eyebrow { font-size: 8px; letter-spacing: 2px; color: #77927d; font-weight: 800; margin: 0 0 10px; text-transform: uppercase; }
+    .panel h2 { font-size: 28px; letter-spacing: -1.2px; line-height: 1.1; margin: 0 0 10px; }
+    .panel-copy { color: #7b897a; font: 12px/1.65 system-ui, sans-serif; margin: 0 0 20px; }
+    .play-button { display: flex; align-items: center; justify-content: center; gap: 16px; width: 100%; border: 0; border-bottom: 4px solid #1a5647; background: var(--green); color: #fffef0; border-radius: 12px; font-size: 14px; font-weight: 800; padding: 14px 18px 12px; transition: background .15s, transform .15s; }
+    .play-button:hover { background: #2e826a; transform: translateY(-1px); }
+    .play-button:active { transform: translateY(2px); }
+    .play-button svg { height: 16px; width: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+    .panel-hint { font: 10px system-ui, sans-serif; color: #93a08c; margin: 13px 0 0; }
+    .results { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: -4px 0 20px; padding: 13px; border: 1px solid #e4ead9; border-radius: 13px; background: #f3f6e9; }
+    .results div { display: flex; flex-direction: column; gap: 4px; }
+    .results span { font-size: 8px; letter-spacing: 1px; color: #819078; }
+    .results strong { font-size: 28px; font-variant-numeric: tabular-nums; }
+    .card-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 8px 3px; color: #8c9a86; font: 9px system-ui, sans-serif; }
+    .card-footer .footer-dot { width: 4px; height: 4px; border-radius: 50%; background: #becba9; display: inline-block; margin-right: 5px; vertical-align: middle; }
+    .site-footer { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid #dce2d6; padding-top: 17px; font-size: 9px; color: #8a9685; letter-spacing: 1.2px; text-transform: uppercase; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (max-width: 780px) {
+      .shell { max-width: 500px; padding: 18px 17px 20px; }
+      .site-header { padding-bottom: 17px; }
+      .edition { font-size: 8px; letter-spacing: 1.2px; }
+      main { display: block; padding: 22px 0; }
+      .intro-column { text-align: center; margin-bottom: 21px; }
+      .eyebrow { justify-content: center; font-size: 8px; }
+      h1 { font-size: 43px; letter-spacing: -2.4px; margin: 11px 0 9px; }
+      h1 span { display: inline; }
+      .intro { font-size: 12px; max-width: none; line-height: 1.5; }
+      .intro br { display: none; }
+      .rule, .how-title, .controls, .small-note { display: none; }
+      .panel { max-width: 280px; padding: 21px 20px 17px; }
+      .panel h2 { font-size: 26px; }
+      .site-footer { letter-spacing: .8px; font-size: 8px; }
+    }
+    @media (max-width: 360px) {
+      .shell { padding: 14px 10px; }
+      .toolbar { padding-left: 5px; padding-right: 5px; }
+      .scores { gap: 11px; }
+      .score-item + .score-item { padding-left: 11px; }
+      .icon-button { width: 32px; height: 32px; }
+      .panel { padding: 18px 17px 15px; }
+      .panel-copy { margin-bottom: 15px; }
+    }
+    .icon-button[aria-pressed="true"] { background: #e0eedf; color: #1e5948; border-color: #bcd0bd; }
+    /* Full Width Play Mode for Larger Screens */
+    body.full-width-mode .shell { max-width: 1400px; padding: 18px 24px 20px; }
+    body.full-width-mode main { display: flex; flex-direction: column-reverse; gap: 28px; padding: 14px 0; }
+    body.full-width-mode .game-card { width: 100%; border-radius: 26px; box-shadow: 0 26px 65px -28px #45665380, 0 4px 0 #d9e2d2; }
+    body.full-width-mode .stage { aspect-ratio: 16 / 9; max-height: min(74vh, 720px); border-radius: 20px; }
+    body.full-width-mode .intro-column { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid #dce2d6; padding-top: 20px; }
+    body.full-width-mode h1 { font-size: clamp(34px, 4.5vw, 54px); margin: 8px 0; }
+    body.full-width-mode .intro { max-width: 480px; font-size: 14px; line-height: 1.6; }
+    body.full-width-mode .rule, body.full-width-mode .how-title { display: none; }
+    body.full-width-mode .controls { display: flex; flex-wrap: wrap; gap: 14px 24px; }
+    body.full-width-mode .small-note { margin-top: 0; }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <!--
+    SETUP: Keep this HTML, bird.svg, and obstacle.svg in the same folder.
+    Open this HTML in a browser. No installation, server, or internet is required.
+    Background, clouds, scenery, fallback artwork, and sounds are built in.
+    obstacle.svg should be upright, with its opening/cap at the TOP.
+    The same SVG is stretched to fill each obstacle; the upper one is flipped.
+    Trim transparent padding in your SVG viewBoxes for closer collision alignment.
+    All adjustable game settings are in CONFIG near the start of the script.
+  -->
+  <div class="shell">
+    <header class="site-header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 15C8 16 11 13 12 6C18 6 21 9 20 13C19 17 13 20 8 18Z" fill="currentColor"/><path d="M5 11L11 13L7 17" stroke="#25725e" stroke-width="1.5" stroke-linejoin="round"/><circle cx="16.5" cy="10" r="1" fill="#25725e"/></svg></span>
+        Little Al-Qaeda
+      </div>
+      <div class="edition">Good skies. Good times. 6 Dancin Guys.</div>
+    </header>
+    <main>
+      <section class="intro-column" aria-labelledby="game-title">
+        <div class="eyebrow">A Little hat arcade</div>
+        <h1 id="game-title">Flappy <span>Qaeda.</span></h1>
+        <p class="intro">Crash in a <b>skyscraper on 0</b> for glory.<br> Crash on the <b>ground</b> and get mocked as lazy 💀.<br> Dodge buildings for <b>-1, -2...</b> tryhard shame.</p>
+        <div class="rule"></div>
+        <h2 class="how-title">The flight manual</h2>
+        <div class="controls" id="instructions">
+          <div class="control-row"><span class="keys"><kbd>Space</kbd><kbd>↑</kbd></span><span>Aim for skyscraper (no floor plants)</span></div>
+          <div class="control-row"><span class="keys"><kbd>F</kbd></span><span>Full width mode</span></div>
+          <div class="control-row"><span class="keys"><kbd>P</kbd></span><span>Pause your shame</span></div>
+          <div class="control-row"><span class="keys"><kbd>R</kbd></span><span>Restart run</span></div>
+        </div>
+        <p class="small-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="3"/><path d="M10 18h4"/></svg>On your phone? Tap anywhere to fly.</p>
+      </section>
+      <section class="game-card" aria-label="Flappy Mock game">
+        <div class="toolbar">
+          <div class="scores">
+            <div class="score-item"><span class="score-label">SCORE</span><span class="score-value" id="score" aria-label="Current mock score">0</span></div>
+            <div class="score-item"><span class="score-label">WORST TRYHARD</span><span class="score-value" id="best" aria-label="Worst tryhard score">0</span></div>
+          </div>
+          <div class="tools">
+            <button type="button" class="icon-button" id="sound-button" aria-label="Mute sound" aria-pressed="true" title="Mute sound">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4Z"/><g id="sound-waves"><path d="M15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/></g><path id="sound-cross" d="M16 9l5 6m0-6l-5 6" hidden/></svg>
+            </button>
+            <button type="button" class="icon-button" id="width-button" aria-label="Toggle full width mode" aria-pressed="false" title="Full width mode (F)">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <g id="expand-icon"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></g>
+                <g id="compress-icon" hidden><path d="M4 14h6v6M20 10h-6V4M10 14l-7 7M14 10l7-7"/></g>
+              </svg>
+            </button>
+            <button type="button" class="icon-button" id="pause-button" aria-label="Pause game" title="Pause (P)" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path id="pause-icon" d="M8 5v14M16 5v14"/></svg>
+            </button>
+            <button type="button" class="icon-button" id="restart-button" aria-label="Restart game" title="Restart (R)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="stage" id="stage" tabindex="0" role="group" aria-label="Flight area. Tap, click, Space, or Up Arrow to flap. P pauses; R restarts; F toggles full width.">
+          <canvas id="game" width="480" height="640" role="img" aria-label="Bird flying through gaps between obstacles in a cloudy sky">Use a browser with HTML canvas support to play this game.</canvas>
+          <div class="location-tag" id="location-tag" aria-hidden="true">01 / METROPOLIS SKYLINE</div>
+          <div class="state-tag" id="state-tag" aria-hidden="true">READY</div>
+          <div class="overlay" id="overlay">
+            <div class="panel">
+              <p class="panel-eyebrow" id="panel-eyebrow">The skyscrapers await</p>
+              <h2 id="panel-title">Smash a building on 0?</h2>
+              <p class="panel-copy" id="panel-copy">Hit a skyscraper on 0 = Pure praise 🏆.<br>Hit the ground = Mocked as lazy 💀.<br>Dodge buildings = -1, -2... tryhard shame.</p>
+              <div class="results" id="results" hidden>
+                <div><span>THIS MOCK SCORE</span><strong id="final-score">0</strong></div>
+                <div><span>WORST TRYHARD</span><strong id="final-best">0</strong></div>
+              </div>
+              <button type="button" class="play-button" id="play-button"><span id="play-label">Smash a skyscraper on 0</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10h13m-5-5l5 5-5 5"/></svg></button>
+              <p class="panel-hint" id="panel-hint">Aim for building · ground crashes get mocked</p>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer"><span><i class="footer-dot"></i>Hit Skyscraper on 0 = Glory 🏆</span><span>Hit Ground = Mocked · Pass = Shame</span></div>
+      </section>
+    </main>
+    <footer class="site-footer"><span>Made for one more try.</span><span>Stay light. Keep flying.</span></footer>
+  </div>
+  <p class="sr-only" id="announcer" role="status" aria-live="polite"></p>
+
+  <script>
+  (() => {
+    'use strict';
+
+    // YOUR ASSETS AND GAME SETTINGS. Both paths are relative to this HTML file.
+    const CONFIG = {
+      birdImage: 'bird.svg',
+      obstacleImage: 'obstacle.svg',
+      flipTopObstacle: true,
+      width: 480,
+      height: 640,
+      groundY: 580,
+      birdX: 132,
+      birdWidth: 48,
+      birdHeight: 36,
+      hitRadius: 14,       // Slightly forgiving circular collision boundary.
+      gravity: 1450,       // Pixels per second squared.
+      flapVelocity: -405,
+      obstacleWidth: 76,
+      obstacleSpacing: 248,
+      startingGap: 184,
+      minimumGap: 158,
+      startingSpeed: 157,
+      maximumSpeed: 213
+    };
+
+    const $ = id => document.getElementById(id);
+    const canvas = $('game');
+    const ctx = canvas.getContext('2d');
+    let W = CONFIG.width;
+    const H = CONFIG.height, FLOOR = CONFIG.groundY;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const storage = {
+      get(key, fallback) { try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; } },
+      set(key, value) { try { localStorage.setItem(key, String(value)); } catch { /* Private/file modes may disable storage. */ } }
+    };
+    const worstKey = 'little-arcade-mock-worst-v2';
+    const soundKey = 'little-arcade-flappy-sound-v1';
+    const widthKey = 'little-arcade-flappy-width-v1';
+    let isFullWidth = storage.get(widthKey, 'standard') === 'wide';
+    let worstTryhard = Math.min(0, Math.floor(Number(storage.get(worstKey, '0')) || 0));
+    if (!Number.isFinite(worstTryhard)) worstTryhard = 0;
+    let soundEnabled = storage.get(soundKey, 'on') !== 'off';
+    let audioContext;
+    let state = 'ready';
+    let score = 0;
+    let obstacles = [];
+    let particles = [];
+    let floatingTexts = [];
+    let sceneTime = 0, distance = 0, accumulator = 0, lastTime = null;
+    let hitFlash = 0, overAt = 0;
+    const bird = { x: CONFIG.birdX, y: 270, vy: 0, angle: 0 };
+    function updateBirdX() {
+      bird.x = Math.round(Math.min(180, Math.max(CONFIG.birdX, W * 0.18)));
+    }
+
+    function addFloatingText(text, x, y, color = '#ef4444', life = 1.6) {
+      if (reducedMotion) return;
+      floatingTexts.push({ text, x: Math.max(10, Math.min(W - 140, x)), y, vy: -32, life, maxLife: life, color });
+    }
+
+    const MOCK_TAGS = [
+      '-1 ("1st try!" 🙄)',
+      '-2 (Sweating already? 💦)',
+      '-3 (Tryhard alert! 🚨)',
+      '-4 (Nobody asked you to dodge 🙄)',
+      '-5 (Stop surviving, it\'s pathetic 💀)',
+      '-6 (Overachiever fraud 🤦‍♂️)',
+      '-7 (TOUCH GRASS IMMEDIATELY 🌿)',
+      '-8 (Total sweatbag 📉)',
+      '-9 (Bro thinks this is esports 🎮)',
+      '-10 (Putting this on LinkedIn? 💼)',
+      '-11 (Call your family, they miss you 📞)',
+      '-12 (Zero bitches detected 🐕)',
+      '-13 (Imagine trying this hard 🥵)',
+      '-14 (Unnecessary acrobatics 🤸‍♂️)',
+      '-15 (Who are you trying to impress? 🧐)',
+      '-16 (Bro is locked in for no reason 🔒)',
+      '-17 (Olympic level time waster 🏅)',
+      '-18 (The sky is embarrassed for you ☁️)',
+      '-19 (Is this what your degree was for? 🎓)',
+      '-20 (Could\'ve learned a language 🇪🇸)',
+      '-21 (Keyboard dripping with sweat 💧)',
+      '-22 (Cringe tryhard energy 😬)',
+      '-23 (Nobody is watching bro 🙈)',
+      '-24 (Bro thinks he\'s Top Gun ✈️)',
+      '-25 (Masterclass in wasted life ⏳)',
+      '-26 (The towers don\'t want you 🏢)',
+      '-27 (Desperate for validation 🥺)',
+      '-28 (Stop flexing on 2D pixels 💪)',
+      '-29 (Your posture is collapsing 🪑)',
+      '-30 (Drink some water, sweatlord 🚰)',
+      '-31 (Are you proud of this? 🤡)',
+      '-32 (Grandma could dodge better 👵)',
+      '-33 (Still claiming "1st try"? 🤥)',
+      '-34 (You missed the point of the game 🎯)',
+      '-35 (Zero productivity champion 🏆)',
+      '-36 (The bird wants to crash 🛑)',
+      '-37 (Please find a hobby 🎨)',
+      '-38 (Certified screen addict 📱)',
+      '-39 (Air traffic control hates you 📡)',
+      '-40 (Do your homework instead 📚)',
+      '-41 (Bro has negative rizz 📉)',
+      '-42 (Meaning of life isn\'t this 🧘)',
+      '-43 (Stop flapping those tiny wings 🪶)',
+      '-44 (You have too much free time ⏱️)',
+      '-45 (Go take a shower 🚿)',
+      '-46 (The sun is setting, go outside 🌅)',
+      '-47 (Sweating harder than gym day 🏋️)',
+      '-48 (Are you getting paid for this? 💸)',
+      '-49 (Your FBI agent is sighing 🕵️)',
+      '-50 (Halfway to 100 shame points 💯)',
+      '-51 (Still alive? Why? 🤔)',
+      '-52 (Embarrassing dedication 🤦)',
+      '-53 (Someone check on this guy 🚑)',
+      '-54 (You refuse to fail properly 🚫)',
+      '-55 (Pure unadulterated sweat 🧂)',
+      '-56 (You must be fun at parties 🎈)',
+      '-57 (Even the clouds are laughing ☁️)',
+      '-58 (Bro memorized the hitboxes 📐)',
+      '-59 (Get a job application ready 📄)',
+      '-60 (Hour of life you won\'t get back 🕰️)',
+      '-61 (Do your chores 🧹)',
+      '-62 (Overcompensation at its finest 🚗)',
+      '-63 (The definition of tryhard 📖)',
+      '-64 (64 bits of pure disappointment 💾)',
+      '-65 (You can stop now, really 🛑)',
+      '-66 (Devil\'s advocate of gaming 😈)',
+      '-67 (Stop dodging the skyscrapers! 🏢)',
+      '-68 (Your chair is crying 🪑)',
+      '-69 (Nice...ly wasted afternoon 💀)',
+      '-70 (Pensioners move faster 👴)',
+      '-71 (Your coffee is cold ☕)',
+      '-72 (Tryharding in 4K resolution 📺)',
+      '-73 (Legendary waste of oxygen 💨)',
+      '-74 (Still avoiding real life? 🌍)',
+      '-75 (Three quarters of pure shame 🥀)',
+      '-76 (Obstacle width is 76, you are 0 📏)',
+      '-77 (Lucky numbers won\'t save you 🎰)',
+      '-78 (Bro wants a Guinness record 📜)',
+      '-79 (Nobody will applaud you 👏)',
+      '-80 (Eighty points of pure cringe 🥶)',
+      '-81 (Your battery is dying 🔋)',
+      '-82 (Go see the sunlight ☀️)',
+      '-83 (Bro is fighting the air 🥊)',
+      '-84 (Unprecedented stubbornness 🦏)',
+      '-85 (You should be studied in a lab 🧪)',
+      '-86 (86\'d from normal society 🚪)',
+      '-87 (Is your Spacebar okay? ⌨️)',
+      '-88 (Great Scott, you have no life ⚡)',
+      '-89 (Stop flexing on geometry 📐)',
+      '-90 (Ninety buildings of shame 🏙️)',
+      '-91 (Your cat is hungry 🐱)',
+      '-92 (Do you need a hug? 🫂)',
+      '-93 (Zero glory in this run 🥉)',
+      '-94 (Bro is allergic to crashing 🤧)',
+      '-95 (Almost at 100, seek help 🆘)',
+      '-96 (Nobody likes a showoff 🦚)',
+      '-97 (Unbelievable sweat quotient 🧪)',
+      '-98 (Your eyes are bloodshot 👀)',
+      '-99 (One away from peak disgrace 💥)',
+      '-100 (CENTURY OF SHAME! 💯💀)',
+      '-101 (Over 100! Touch grass! 🌿)',
+      '-102 (Unstoppable sweat machine 🤖)',
+      '-103 (The skyscrapers surrendered 🏳️)',
+      '-104 (Certified pixel tryhard 🎖️)',
+      '-105 (Absolute worst effort champion! 🏆💀)'
+    ];
+
+    function victoryFanfare() {
+      if (!soundEnabled || !audioContext || audioContext.state !== 'running') return;
+      tone(523, 659, .14, .06);
+      setTimeout(() => tone(659, 784, .16, .06), 120);
+      setTimeout(() => tone(784, 1046, .28, .07), 260);
+    }
+
+    function sadTrombone() {
+      if (!soundEnabled || !audioContext || audioContext.state !== 'running') return;
+      tone(290, 240, .18, .05);
+      setTimeout(() => tone(240, 180, .22, .05), 180);
+      setTimeout(() => tone(180, 120, .35, .06), 390);
+    }
+
+    // Missing SVGs are harmless: built-in artwork is used until you add them.
+    function loadAsset(path) {
+      const image = new Image();
+      const asset = { image, ready: false };
+      image.onload = () => { asset.ready = image.naturalWidth > 0 && image.naturalHeight > 0; };
+      image.onerror = () => { asset.ready = false; };
+      image.src = path;
+      return asset;
+    }
+    const birdAsset = loadAsset(CONFIG.birdImage);
+    const obstacleAsset = loadAsset(CONFIG.obstacleImage);
+
+    function resizeCanvas() {
+      const rect = $('stage').getBoundingClientRect();
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const stageRatio = (rect.width > 0 && rect.height > 0) ? (rect.width / rect.height) : (isFullWidth ? (16 / 9) : (3 / 4));
+      W = Math.max(480, Math.round(H * stageRatio));
+      updateBirdX();
+      canvas.width = Math.round(W * ratio);
+      canvas.height = Math.round(H * ratio);
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      if (state === 'ready') seedObstacles();
+    }
+    window.addEventListener('resize', resizeCanvas);
+    if (window.ResizeObserver) {
+      new ResizeObserver(() => resizeCanvas()).observe($('stage'));
+    }
+
+    // Short, quiet synthesized sounds; no audio downloads are needed.
+    function unlockAudio() {
+      if (!soundEnabled) return;
+      try {
+        const Audio = window.AudioContext || window.webkitAudioContext;
+        if (!Audio) return;
+        if (!audioContext) audioContext = new Audio();
+        if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+      } catch { /* Gameplay continues if audio is unavailable. */ }
+    }
+    function tone(from, to, duration, volume = .04, delay = 0) {
+      if (!soundEnabled || !audioContext || audioContext.state !== 'running') return;
+      try {
+        const start = audioContext.currentTime + delay;
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(from, start);
+        oscillator.frequency.exponentialRampToValueAtTime(to, start + duration);
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(volume, start + .01);
+        gain.gain.exponentialRampToValueAtTime(.001, start + duration);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(start);
+        oscillator.stop(start + duration + .02);
+        oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+      } catch { /* Audio is optional. */ }
+    }
+    function syncSoundButton() {
+      $('sound-waves').toggleAttribute('hidden', !soundEnabled);
+      $('sound-cross').toggleAttribute('hidden', soundEnabled);
+      $('sound-button').setAttribute('aria-pressed', String(soundEnabled));
+      $('sound-button').setAttribute('aria-label', soundEnabled ? 'Mute sound' : 'Enable sound');
+      $('sound-button').title = soundEnabled ? 'Mute sound' : 'Enable sound';
+    }
+    function syncWidthMode() {
+      document.body.classList.toggle('full-width-mode', isFullWidth);
+      $('expand-icon').toggleAttribute('hidden', isFullWidth);
+      $('compress-icon').toggleAttribute('hidden', !isFullWidth);
+      $('width-button').setAttribute('aria-pressed', String(isFullWidth));
+      $('width-button').setAttribute('aria-label', isFullWidth ? 'Standard mode' : 'Full width mode');
+      $('width-button').title = isFullWidth ? 'Standard mode (F)' : 'Full width mode (F)';
+      $('location-tag').textContent = isFullWidth ? '01 / METROPOLIS · WIDESCREEN' : '01 / METROPOLIS SKYLINE';
+      storage.set(widthKey, isFullWidth ? 'wide' : 'standard');
+      resizeCanvas();
+      requestAnimationFrame(resizeCanvas);
+    }
+    function toggleFullWidth() {
+      isFullWidth = !isFullWidth;
+      syncWidthMode();
+      announce(isFullWidth ? 'Full width mode enabled.' : 'Standard mode enabled.');
+      $('width-button').blur();
+    }
+    function syncScores() {
+      $('score').textContent = String(score);
+      $('best').textContent = String(worstTryhard);
+    }
+    function syncState() {
+      $('overlay').hidden = state === 'playing';
+      $('state-tag').textContent = { ready: 'READY', playing: 'TRYHARDING', paused: 'PAUSED', over: (score === 0 ? 'PERFECT 0' : 'ROASTED') }[state];
+      $('pause-button').disabled = state !== 'playing' && state !== 'paused';
+      $('pause-button').setAttribute('aria-label', state === 'paused' ? 'Resume game' : 'Pause game');
+      $('pause-button').title = state === 'paused' ? 'Resume (P)' : 'Pause (P)';
+      $('pause-icon').setAttribute('d', state === 'paused' ? 'M8 4l12 8-12 8Z' : 'M8 5v14M16 5v14');
+      $('results').hidden = state !== 'over';
+      if (state === 'paused') {
+        $('panel-eyebrow').textContent = 'Shame on pause';
+        $('panel-title').textContent = 'Caught your breath?';
+        $('panel-copy').textContent = 'Your upcoming roasts can wait a second.';
+        $('play-label').textContent = 'Resume tryharding';
+        $('panel-hint').textContent = 'Press P to resume · R to restart';
+      }
+    }
+    function announce(text) { $('announcer').textContent = text; }
+
+    function addObstacle(x, first = false) {
+      const gap = Math.max(CONFIG.minimumGap, CONFIG.startingGap - Math.abs(score) * 1.2);
+      const previous = obstacles.length ? obstacles[obstacles.length - 1].center : 280;
+      const change = (Math.random() - .5) * (first ? 90 : 240);
+      const center = Math.max(95 + gap / 2, Math.min(FLOOR - 95 - gap / 2, previous + change));
+      obstacles.push({ x, center, gap, passed: false });
+    }
+    function seedObstacles() {
+      obstacles = [];
+      let startX = bird.x + 360;
+      let isFirst = true;
+      while (startX <= W + 40) {
+        addObstacle(startX, isFirst);
+        startX += CONFIG.obstacleSpacing;
+        isFirst = false;
+      }
+    }
+    function flap() {
+      bird.vy = CONFIG.flapVelocity;
+      tone(490, 790, .07, .023);
+      if (!reducedMotion) {
+        for (let i = 0; i < 4; i++) particles.push({
+          x: bird.x - 19, y: bird.y + 7, vx: -50 - Math.random() * 55,
+          vy: (Math.random() - .5) * 65, life: .35, maxLife: .35, r: 2 + Math.random() * 3
+        });
+      }
+    }
+    function startGame() {
+      unlockAudio();
+      state = 'playing';
+      score = 0;
+      particles = [];
+      floatingTexts = [];
+      hitFlash = 0;
+      updateBirdX();
+      bird.y = 270;
+      bird.vy = 0;
+      bird.angle = 0;
+      accumulator = 0;
+      lastTime = null;
+      seedObstacles();
+      syncScores();
+      syncState();
+      flap();
+      announce('Flight started. Space, Up Arrow, or tap to flap.');
+      $('play-button').blur();
+    }
+    function setPaused(paused) {
+      if (paused && state !== 'playing' || !paused && state !== 'paused') return;
+      state = paused ? 'paused' : 'playing';
+      accumulator = 0;
+      lastTime = null;
+      syncState();
+      announce(paused ? 'Game paused.' : 'Flight resumed.');
+      if (!paused) $('play-button').blur();
+    }
+    function endGame(crashSource = 'skyscraper') {
+      if (state !== 'playing') return;
+      state = 'over';
+      overAt = performance.now();
+      hitFlash = reducedMotion ? 0 : .16;
+
+      if (score < worstTryhard) {
+        worstTryhard = score;
+        storage.set(worstKey, worstTryhard);
+      }
+      syncScores();
+      syncState();
+
+      if (score === 0) {
+        if (crashSource === 'skyscraper') {
+          // Crashed directly into a skyscraper on 0: FULL PRAISE!
+          $('panel-eyebrow').textContent = '🏆 DIRECT HIT · ZERO DODGING HERO';
+          $('panel-title').textContent = 'MAGNIFICENT SKYSCRAPER CRASH!';
+          $('panel-copy').innerHTML = 'CONGRATULATIONS! You aimed straight for the skyscraper and obliterated it on <b>0 score</b>!<br>Zero dodging, zero tryharding, 100% direct building impact.<br>True master of architectural demolition! 🥇🏙️';
+          $('play-label').textContent = 'Smash skyscraper on 0 again';
+          $('panel-hint').textContent = 'Press Space · perfect skyscraper crash!';
+          $('state-tag').textContent = 'PERFECT SMASH 🏆';
+          victoryFanfare();
+          announce('Congratulations! You crashed in the skyscraper on 0! True champion!');
+          addFloatingText('SKYSCRAPER SMASH! 🏆', bird.x - 20, bird.y - 25, '#fbbf24', 2.8);
+        } else {
+          // Crashed on the ground on 0: MOCK THEM!
+          $('panel-eyebrow').textContent = '🤦‍♂️ Atleast they hit SOMETHING';
+          $('panel-title').textContent = 'They 2 & you none!!';
+          $('panel-copy').innerHTML = 'You crashed on 0, but on the <b>GROUND</b>! That doesn’t count!<br>Bro got defeated by dirt before even reaching the skyscraper.<br>Aim for the building next time, you lazy lawn ornament! 💀🌱';
+          $('play-label').textContent = 'Aim for the skyscraper';
+          $('panel-hint').textContent = 'Press Space · hit a building next time';
+          $('state-tag').textContent = 'DIRT NAP 🤦‍♂️';
+          sadTrombone();
+          announce('Died on the ground? Lazy! Hit the skyscraper next time!');
+          addFloatingText('FLOOR PLANT! LAZY! 💀', bird.x - 20, bird.y - 25, '#f87171', 2.8);
+        }
+      } else {
+        // score < 0: Mock them about "did it on 1st try" and their negative score!
+        const absScore = Math.abs(score);
+        let eyebrow, title, copy;
+
+        if (score === -1) {
+          eyebrow = '😒 WOW, LOOK AT MR. FIRST TRY';
+          title = 'Did it on the 1st try, huh?';
+          copy = crashSource === 'skyscraper'
+            ? 'Couldn’t even smash the first skyscraper on zero?<br>You survived to <b>-1</b> and now you’re gonna tell all your friends you did it on your <i>"first try"</i>? 💀'
+            : 'Dodged into <b>-1</b> just to faceplant into the grass?<br>Bet you’re telling everyone you did that embarrassing floor dive on your <i>"first try"</i>! 💀🌱';
+        } else if (score === -2) {
+          eyebrow = '🙄 "FIRST TRY" OVERACHIEVER';
+          title = 'Bet you’re bragging already';
+          copy = `Score: <b>-2</b>. Bro really sweated through two whole skyscrapers just to brag: <i>"I got -2 on my 1st try!"</i>.<br>We are all rolling our eyes at you.`;
+        } else if (score === -3) {
+          eyebrow = '🤦‍♂️ TRYHARD DETECTED';
+          title = '"Totally meant to do that on 1st try!"';
+          copy = `Score: <b>-3</b>. The intense keyboard sweating is embarrassing. Reaching -3 on your <i>"first try"</i> earns you zero respect and maximum pity.`;
+        } else if (score >= -6) {
+          eyebrow = '💀 PATHETICALLY OVERQUALIFIED';
+          title = `Bet you put "${score} on 1st try" on your resume`;
+          copy = `A shameful <b>${score}</b>. You dodged ${absScore} skyscrapers just to receive this insult.<br>Nobody asked you to tryhard this desperately.`;
+        } else if (score >= -10) {
+          eyebrow = '🚨 CERTIFIED CHRONIC TRYHARD';
+          title = `"${score} on 1st try" and zero friends left`;
+          copy = `A grotesque score of <b>${score}</b>. You dodged ${absScore} skyscrapers.<br>What did you want, a gold medal? Log off and touch some grass immediately.`;
+        } else {
+          eyebrow = '📉 UNFORGIVABLE SWEATINESS';
+          title = `Peak tryhard unlocked: ${score}`;
+          copy = `You actually survived ${absScore} buildings. You clearly practiced for hours just to come here and claim <i>"1st try"</i>.<br>Go outside. The sky is tired of you.`;
+        }
+
+        $('panel-eyebrow').textContent = eyebrow;
+        $('panel-title').textContent = title;
+        $('panel-copy').innerHTML = copy;
+        $('play-label').textContent = 'Try to smash building on 0';
+        $('panel-hint').textContent = 'Press Space · R to retry';
+        $('state-tag').textContent = 'ROASTED 💀';
+        sadTrombone();
+        announce(`Game over. Mock score ${score}. ${title}`);
+        addFloatingText(`"${score} on 1st try" 💀`, bird.x - 20, bird.y - 25, '#ef4444', 2.5);
+      }
+
+      $('final-score').textContent = score;
+      $('final-best').textContent = worstTryhard;
+    }
+    function inputFlap() {
+      unlockAudio();
+      if (state === 'ready') startGame();
+      else if (state === 'playing') flap();
+      else if (state === 'paused') { setPaused(false); flap(); }
+      else if (state === 'over' && performance.now() - overAt > 350) startGame();
+    }
+    function circleHitsRect(cx, cy, r, x, y, w, h) {
+      const dx = cx - Math.max(x, Math.min(cx, x + w));
+      const dy = cy - Math.max(y, Math.min(cy, y + h));
+      return dx * dx + dy * dy < r * r;
+    }
+    function update(dt) {
+      if (state !== 'paused' && (state === 'playing' || !reducedMotion)) sceneTime += dt;
+      hitFlash = Math.max(0, hitFlash - dt);
+      if (state === 'ready') {
+        bird.y = 190 + (reducedMotion ? 0 : Math.sin(sceneTime * 3) * 7);
+        bird.angle = -.08;
+        return;
+      }
+      if (state !== 'playing') return;
+      const speed = Math.min(CONFIG.maximumSpeed, CONFIG.startingSpeed + Math.abs(score) * 1.65);
+      distance += speed * dt;
+      bird.vy = Math.min(bird.vy + CONFIG.gravity * dt, 720);
+      bird.y += bird.vy * dt;
+      const targetAngle = Math.max(-.45, Math.min(1.25, bird.vy / 650));
+      bird.angle += (targetAngle - bird.angle) * Math.min(1, dt * 12);
+
+      for (const particle of particles) {
+        particle.x += particle.vx * dt;
+        particle.y += particle.vy * dt;
+        particle.life -= dt;
+      }
+      particles = particles.filter(p => p.life > 0).slice(-60);
+
+      for (const ft of floatingTexts) {
+        ft.y += ft.vy * dt;
+        ft.life -= dt;
+      }
+      floatingTexts = floatingTexts.filter(ft => ft.life > 0).slice(-20);
+
+      if (bird.y - CONFIG.hitRadius <= 0 || bird.y + CONFIG.hitRadius >= FLOOR) {
+        bird.y = Math.max(CONFIG.hitRadius, Math.min(FLOOR - CONFIG.hitRadius, bird.y));
+        endGame('ground');
+        return;
+      }
+      for (const obstacle of obstacles) {
+        obstacle.x -= speed * dt;
+        const top = obstacle.center - obstacle.gap / 2;
+        const bottom = obstacle.center + obstacle.gap / 2;
+        if (circleHitsRect(bird.x, bird.y, CONFIG.hitRadius, obstacle.x, 0, CONFIG.obstacleWidth, top) ||
+            circleHitsRect(bird.x, bird.y, CONFIG.hitRadius, obstacle.x, bottom, CONFIG.obstacleWidth, FLOOR - bottom)) {
+          endGame('skyscraper');
+          return;
+        }
+        if (!obstacle.passed && obstacle.x + CONFIG.obstacleWidth < bird.x - CONFIG.hitRadius) {
+          obstacle.passed = true;
+          score--; // Count as negative: -1, -2, -3...
+          syncScores();
+          tone(540, 340, .12, .035); // Comical descending sarcastic boop
+          const abs = Math.abs(score);
+          const tag = (abs <= MOCK_TAGS.length)
+            ? MOCK_TAGS[abs - 1]
+            : `${score} (Beyond shame: seek help! 💀)`;
+          addFloatingText(tag, bird.x + 10, bird.y - 14, '#ef4444', 1.6);
+        }
+      }
+      const last = obstacles[obstacles.length - 1];
+      if (last && last.x <= W + 35 - CONFIG.obstacleSpacing) addObstacle(last.x + CONFIG.obstacleSpacing);
+      obstacles = obstacles.filter(o => o.x + CONFIG.obstacleWidth > -10);
+    }
+
+    // BACKGROUND: everything below is drawn locally, with no image dependencies.
+    function ellipse(x, y, rx, ry, color) {
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    const clouds = [
+      { x: 60, y: 105, s: .72, speed: 8, alpha: .60 },
+      { x: 360, y: 158, s: 1.04, speed: 7, alpha: .54 },
+      { x: 195, y: 60, s: .47, speed: 5, alpha: .60 },
+      { x: 70, y: 305, s: 1.05, speed: 13, alpha: .86 },
+      { x: 397, y: 363, s: .77, speed: 16, alpha: .74 },
+      { x: 265, y: 246, s: .42, speed: 10, alpha: .65 },
+      { x: 580, y: 115, s: .85, speed: 9, alpha: .62 },
+      { x: 760, y: 230, s: .65, speed: 11, alpha: .58 },
+      { x: 940, y: 140, s: 1.02, speed: 8, alpha: .70 },
+      { x: 1120, y: 280, s: .78, speed: 14, alpha: .75 }
+    ];
+    function drawCloud(cloud) {
+      const span = Math.max(W + 180, 1300);
+      const x = ((cloud.x - sceneTime * cloud.speed + 90) % span + span) % span - 90;
+      ctx.save();
+      ctx.translate(x, cloud.y); ctx.scale(cloud.s, cloud.s); ctx.globalAlpha = cloud.alpha;
+      ellipse(0, 5, 66, 14, '#badfd9');
+      ellipse(-33, 0, 30, 18, '#fffef4');
+      ellipse(-7, -17, 31, 30, '#fffef4');
+      ellipse(24, -9, 28, 23, '#fffef4');
+      ellipse(47, 3, 24, 15, '#fffef4');
+      ellipse(3, 6, 56, 14, '#fffef4');
+      ctx.restore();
+    }
+    function drawBackground() {
+      const sky = ctx.createLinearGradient(0, 0, 0, FLOOR);
+      sky.addColorStop(0, '#b9e5e5'); sky.addColorStop(.65, '#d9eddd'); sky.addColorStop(1, '#f1efd0');
+      ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+      const sunX = Math.round(W * 0.82);
+      ellipse(sunX, 103, 66, 66, '#fff5c02e');
+      ellipse(sunX, 103, 50, 50, '#fff5c045');
+      ellipse(sunX, 103, 35, 35, '#fff3bb');
+      clouds.forEach(drawCloud);
+      const drift = distance * .1;
+      // Repeating rolling hills in two layers.
+      for (let layer = 0; layer < 2; layer++) {
+        const period = layer ? 300 : 390;
+        const offset = (drift * (layer ? 1.5 : 1)) % period;
+        ctx.fillStyle = layer ? '#adcba0' : '#c5d7b1';
+        ctx.beginPath(); ctx.moveTo(-period, FLOOR);
+        for (let x = -period - offset; x < W + period; x += period) {
+          ctx.lineTo(x, FLOOR - 15);
+          ctx.bezierCurveTo(x + period * .25, FLOOR - (layer ? 82 : 128), x + period * .64, FLOOR - (layer ? 66 : 105), x + period, FLOOR - 15);
+        }
+        ctx.lineTo(W + period, H); ctx.lineTo(-period, H); ctx.closePath(); ctx.fill();
+      }
+      const shrubOffset = (distance * .25) % 80;
+      for (let x = -80 - shrubOffset; x < W + 80; x += 80) {
+        ellipse(x + 16, FLOOR - 8, 22, 23, '#96bc91');
+        ellipse(x + 44, FLOOR - 7, 30, 33, '#a2c293');
+        ellipse(x + 65, FLOOR, 27, 23, '#8fb78b');
+      }
+    }
+    function drawFallbackObstacle(x, y, w, h, top) {
+      // White WTC building facade
+      const body = ctx.createLinearGradient(x, 0, x + w, 0);
+      body.addColorStop(0, '#ffffff'); body.addColorStop(.08, '#f8fafc');
+      body.addColorStop(.5, '#f1f5f9'); body.addColorStop(.92, '#e2e8f0'); body.addColorStop(1, '#cbd5e1');
+      ctx.fillStyle = body; ctx.fillRect(x, y, w, h);
+
+      // Vertical black slit windows (WTC style)
+      const cols = 8;
+      const colW = 4.2;
+      const spacing = 8;
+      const rowH = 12;
+      ctx.fillStyle = '#090d16';
+      for (let wy = y + 24; wy < y + h - 14; wy += rowH) {
+        for (let c = 0; c < cols; c++) {
+          const wx = x + 6 + c * spacing;
+          ctx.fillRect(wx, wy, colW, 8);
+        }
+      }
+
+      // Flat rooftop parapet & antenna (facing flight gap)
+      const capY = top ? y + h - 14 : y;
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(x, capY, w, 14);
+      ctx.fillStyle = '#cbd5e1'; ctx.fillRect(x, top ? capY : capY + 12, w, 2);
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(x + w / 2, top ? y + h - 2 : y + 2, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    function drawObstacle(x, y, w, h, top) {
+      if (h <= 0) return;
+      if (!obstacleAsset.ready) { drawFallbackObstacle(x, y, w, h, top); return; }
+      ctx.save();
+      ctx.translate(x, top && CONFIG.flipTopObstacle ? y + h : y);
+      if (top && CONFIG.flipTopObstacle) ctx.scale(1, -1);
+      ctx.drawImage(obstacleAsset.image, 0, 0, w, h);
+      ctx.restore();
+    }
+    function drawGround() {
+      ctx.fillStyle = '#739663'; ctx.fillRect(0, FLOOR, W, 4);
+      ctx.fillStyle = '#b6cc84'; ctx.fillRect(0, FLOOR + 4, W, 12);
+      const offset = distance % 24;
+      ctx.fillStyle = '#d2dea0';
+      for (let x = -24 - offset; x < W; x += 24) {
+        ctx.beginPath(); ctx.moveTo(x, FLOOR + 4); ctx.lineTo(x + 12, FLOOR + 4);
+        ctx.lineTo(x + 3, FLOOR + 16); ctx.lineTo(x - 9, FLOOR + 16); ctx.closePath(); ctx.fill();
+      }
+      ctx.fillStyle = '#eee4bf'; ctx.fillRect(0, FLOOR + 16, W, H - FLOOR - 16);
+      ctx.fillStyle = '#d9cfa9'; ctx.fillRect(0, FLOOR + 16, W, 3);
+      ctx.fillStyle = '#d5caa450';
+      for (let i = 0; i < 29; i++) {
+        const x = ((i * 47 - distance * .8) % (W + 20) + W + 20) % (W + 20);
+        ctx.fillRect(x, FLOOR + 27 + (i % 4) * 8, 3, 2);
+      }
+    }
+    function drawBird() {
+      ctx.save(); ctx.translate(bird.x, bird.y); ctx.rotate(bird.angle);
+      if (birdAsset.ready) {
+        const ratio = Math.min(CONFIG.birdWidth / birdAsset.image.naturalWidth, CONFIG.birdHeight / birdAsset.image.naturalHeight);
+        const width = birdAsset.image.naturalWidth * ratio, height = birdAsset.image.naturalHeight * ratio;
+        ctx.drawImage(birdAsset.image, -width / 2, -height / 2, width, height);
+      } else {
+        ctx.fillStyle = '#d7a446';
+        ctx.beginPath(); ctx.moveTo(-15, -1); ctx.lineTo(-28, -9); ctx.lineTo(-25, 5); ctx.lineTo(-12, 9); ctx.closePath(); ctx.fill();
+        ellipse(0, 1, 22, 17, '#cf9c43');
+        ellipse(0, -1, 22, 17, '#f5c956');
+        ellipse(3, 7, 15, 8, '#ffdf7d');
+        const wing = state === 'paused' || state === 'over' || reducedMotion ? 0 : Math.sin(sceneTime * 28) * 3;
+        ellipse(-9, 4 + wing, 11, 6, '#dba946');
+        ellipse(-10, 2 + wing, 10, 5, '#fce591');
+        ellipse(12, -6, 8, 9, '#fffef4');
+        ellipse(15, -5, 3.1, 4, '#2d4841');
+        ellipse(16, -6.5, .9, 1, '#ffffff');
+        ctx.fillStyle = '#e7844c';
+        ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(30, 4); ctx.lineTo(19, 8); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#c4653c'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(20, 4); ctx.lineTo(28, 4); ctx.stroke();
+      }
+      ctx.restore();
+    }
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      drawBackground();
+      for (const obstacle of obstacles) {
+        const top = obstacle.center - obstacle.gap / 2;
+        const bottom = obstacle.center + obstacle.gap / 2;
+        drawObstacle(obstacle.x, 0, CONFIG.obstacleWidth, top, true);
+        drawObstacle(obstacle.x, bottom, CONFIG.obstacleWidth, FLOOR - bottom, false);
+      }
+      for (const p of particles) {
+        ctx.globalAlpha = p.life / p.maxLife * .8;
+        ellipse(p.x, p.y, p.r, p.r, '#fffce3');
+      }
+      ctx.globalAlpha = 1;
+      drawBird();
+      drawGround();
+      for (const ft of floatingTexts) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, ft.life / ft.maxLife));
+        ctx.font = '800 13px ui-rounded, "Arial Rounded MT Bold", sans-serif';
+        ctx.textAlign = 'left';
+        ctx.strokeStyle = '#fffef7';
+        ctx.lineWidth = 3;
+        ctx.strokeText(ft.text, ft.x, ft.y);
+        ctx.fillStyle = ft.color || '#ef4444';
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      }
+      if (hitFlash > 0) { ctx.fillStyle = `rgba(255,255,245,${hitFlash * 2})`; ctx.fillRect(0, 0, W, H); }
+    }
+
+    // Fixed physics steps make game speed independent of monitor refresh rate.
+    const STEP = 1 / 120;
+    function frame(time) {
+      const dt = lastTime === null ? 0 : Math.min((time - lastTime) / 1000, .05);
+      lastTime = time;
+      accumulator += dt;
+      while (accumulator >= STEP) { update(STEP); accumulator -= STEP; }
+      draw();
+      requestAnimationFrame(frame);
+    }
+
+    $('stage').addEventListener('pointerdown', event => {
+      if (event.target.closest('button') || (event.pointerType === 'mouse' && event.button !== 0) || !event.isPrimary) return;
+      event.preventDefault();
+      $('stage').focus({ preventScroll: true });
+      inputFlap();
+    });
+    $('play-button').addEventListener('click', () => {
+      unlockAudio();
+      if (state === 'paused') setPaused(false);
+      else startGame();
+    });
+    $('restart-button').addEventListener('click', () => { startGame(); $('restart-button').blur(); });
+    $('pause-button').addEventListener('click', () => { setPaused(state === 'playing'); $('pause-button').blur(); });
+    $('width-button').addEventListener('click', () => { toggleFullWidth(); });
+    $('sound-button').addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      storage.set(soundKey, soundEnabled ? 'on' : 'off');
+      syncSoundButton(); unlockAudio();
+      $('sound-button').blur();
+    });
+    window.addEventListener('keydown', event => {
+      if (event.ctrlKey || event.metaKey || event.altKey || /INPUT|TEXTAREA|SELECT/.test(event.target.tagName) || event.target.isContentEditable) return;
+      const isFlap = event.code === 'Space' || event.code === 'ArrowUp';
+      if (event.target.closest('button') && event.code === 'Space') return;
+      if (isFlap || ['KeyP', 'KeyR', 'KeyF', 'Escape'].includes(event.code)) {
+        event.preventDefault();
+        if (event.repeat) return;
+        if (isFlap) inputFlap();
+        else if (event.code === 'KeyR') startGame();
+        else if (event.code === 'KeyF') toggleFullWidth();
+        else setPaused(state === 'playing');
+      }
+    });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) setPaused(true); });
+    window.addEventListener('blur', () => setPaused(true));
+    syncScores(); syncSoundButton(); syncWidthMode(); syncState();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>
