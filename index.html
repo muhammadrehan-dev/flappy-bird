@@ -77,8 +77,19 @@
     canvas { display: block; width: 100%; height: 100%; }
     .location-tag { position: absolute; top: 19px; left: 19px; font-size: 8px; letter-spacing: 2px; color: #507d78; font-weight: bold; pointer-events: none; }
     .state-tag { position: absolute; top: 16px; right: 15px; display: flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid #ffffff80; border-radius: 30px; background: #ffffff45; font-size: 8px; letter-spacing: 1px; color: #497267; pointer-events: none; }
-    .state-tag::before { content: ""; width: 4px; height: 4px; background: #609d71; border-radius: 50%; }
-    .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 22px; }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+      animation: overlayFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes overlayFadeIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
     .panel { width: 100%; max-width: 308px; padding: 25px 24px 20px; text-align: center; border: 1px solid #ffffff; border-radius: 22px; background: #fffef5f5; box-shadow: 0 12px 32px #4c79631c; transform: translateY(24px); }
     .panel-eyebrow { font-size: 8px; letter-spacing: 2px; color: #77927d; font-weight: 800; margin: 0 0 10px; text-transform: uppercase; }
     .panel h2 { font-size: 28px; letter-spacing: -1.2px; line-height: 1.1; margin: 0 0 10px; }
@@ -320,7 +331,7 @@
         <div class="card-footer"><span><i class="footer-dot"></i>Hit Skyscraper on 0 = Glory 🏆</span><span>Hit Ground = Mocked · Pass = Shame</span></div>
       </section>
     </main>
-    <footer class="site-footer"><span>Copyright &copy; Uncle Osama (Sep 2001 - till ) </span><span>Stay light. Keep flying.</span></footer>
+    <footer class="site-footer"><span>Copyright &copy; Uncle Osama (Sep 2011 - till ) </span><span>Stay light. Keep flying.</span></footer>
   </div>
   <p class="sr-only" id="announcer" role="status" aria-live="polite"></p>
 
@@ -372,9 +383,10 @@
     let score = 0;
     let obstacles = [];
     let particles = [];
+    let retroSparks = [];
     let floatingTexts = [];
     let sceneTime = 0, distance = 0, accumulator = 0, lastTime = null;
-    let hitFlash = 0, overAt = 0;
+    let hitFlash = 0, overAt = 0, screenShake = 0, overTimer = null;
     const bird = { x: CONFIG.birdX, y: 270, vy: 0, angle: 0 };
     function updateBirdX() {
       bird.x = Math.round(Math.min(180, Math.max(80, W * 0.22)));
@@ -651,7 +663,8 @@
       $('best').textContent = String(worstTryhard);
     }
     function syncState() {
-      $('overlay').hidden = state === 'playing';
+      const isCrashGracePeriod = state === 'over' && (performance.now() - overAt < 3000);
+      $('overlay').hidden = state === 'playing' || isCrashGracePeriod;
       $('state-tag').textContent = { ready: 'READY', playing: 'TRYHARDING', paused: 'PAUSED', over: (score === 0 ? 'PERFECT 0' : 'ROASTED') }[state];
       $('pause-button').disabled = state !== 'playing' && state !== 'paused';
       $('pause-button').setAttribute('aria-label', state === 'paused' ? 'Resume game' : 'Pause game');
@@ -700,6 +713,7 @@
     }
     function startGame() {
       unlockAudio();
+      if (overTimer) { clearTimeout(overTimer); overTimer = null; }
       // On mobile/touch devices, automatically launch full-screen for an immersive experience!
       const isMobile = window.innerWidth <= 820 || ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
       if (isMobile && !isFullscreenActive()) {
@@ -708,8 +722,10 @@
       state = 'playing';
       score = 0;
       particles = [];
+      retroSparks = [];
       floatingTexts = [];
       hitFlash = 0;
+      screenShake = 0;
       updateBirdX();
       bird.y = 270;
       bird.vy = 0;
@@ -732,11 +748,36 @@
       announce(paused ? 'Game paused.' : 'Flight resumed.');
       if (!paused) $('play-button').blur();
     }
+    function spawnRetroSparks(cx, cy) {
+      if (reducedMotion) return;
+      retroSparks = [];
+      const count = 16;
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + (Math.random() - .5) * .35;
+        const speed = 110 + Math.random() * 160;
+        retroSparks.push({
+          x: cx,
+          y: cy,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          rot: Math.random() * Math.PI,
+          vrot: (Math.random() - .5) * 12,
+          size: 6 + Math.random() * 6,
+          color: ['#facc15', '#ffffff', '#38bdf8', '#fbbf24', '#f43f5e'][i % 5],
+          life: .55,
+          maxLife: .55
+        });
+      }
+    }
+
     function endGame(crashSource = 'skyscraper') {
       if (state !== 'playing') return;
       state = 'over';
       overAt = performance.now();
-      hitFlash = reducedMotion ? 0 : .16;
+      hitFlash = reducedMotion ? 0 : .24;
+      screenShake = reducedMotion ? 0 : .28;
+      spawnRetroSparks(bird.x, bird.y);
+      tone(180, 50, .14, .08);
 
       if (score < worstTryhard) {
         worstTryhard = score;
@@ -744,6 +785,14 @@
       }
       syncScores();
       syncState();
+
+      // Wait minimum 3 seconds before showing the game-over mock message panel
+      if (overTimer) clearTimeout(overTimer);
+      overTimer = setTimeout(() => {
+        if (state === 'over') {
+          syncState();
+        }
+      }, 3000);
 
       if (score === 0) {
         if (crashSource === 'skyscraper') {
@@ -821,7 +870,7 @@
       if (state === 'ready') startGame();
       else if (state === 'playing') flap();
       else if (state === 'paused') { setPaused(false); flap(); }
-      else if (state === 'over' && performance.now() - overAt > 350) startGame();
+      else if (state === 'over' && performance.now() - overAt >= 3000) startGame();
     }
     function circleHitsRect(cx, cy, r, x, y, w, h) {
       const dx = cx - Math.max(x, Math.min(cx, x + w));
@@ -831,12 +880,30 @@
     function update(dt) {
       if (state !== 'paused' && (state === 'playing' || !reducedMotion)) sceneTime += dt;
       hitFlash = Math.max(0, hitFlash - dt);
+      if (screenShake > 0) screenShake = Math.max(0, screenShake - dt);
+      for (const s of retroSparks) {
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
+        s.vy += 320 * dt;
+        s.rot += s.vrot * dt;
+        s.life -= dt;
+      }
+      retroSparks = retroSparks.filter(s => s.life > 0);
       if (state === 'ready') {
         bird.y = 190 + (reducedMotion ? 0 : Math.sin(sceneTime * 3) * 7);
         bird.angle = -.08;
         return;
       }
-      if (state !== 'playing') return;
+      if (state !== 'playing') {
+        if (state === 'over') {
+          if (bird.y + CONFIG.hitRadius < FLOOR) {
+            bird.vy = Math.min(bird.vy + CONFIG.gravity * dt * 0.6, 420);
+            bird.y = Math.min(FLOOR - CONFIG.hitRadius, bird.y + bird.vy * dt);
+            bird.angle = Math.min(1.2, bird.angle + dt * 2.5);
+          }
+        }
+        return;
+      }
       const speed = Math.min(CONFIG.maximumSpeed, CONFIG.startingSpeed + Math.abs(score) * 1.65);
       distance += speed * dt;
       bird.vy = Math.min(bird.vy + CONFIG.gravity * dt, 720);
@@ -1037,6 +1104,11 @@
       ctx.restore();
     }
     function draw() {
+      ctx.save();
+      if (screenShake > 0 && !reducedMotion) {
+        const mag = (screenShake / .28) * 8;
+        ctx.translate((Math.random() - .5) * mag * 2, (Math.random() - .5) * mag * 2);
+      }
       drawBackground();
       for (const obstacle of obstacles) {
         const top = obstacle.center - obstacle.gap / 2;
@@ -1051,6 +1123,27 @@
       ctx.globalAlpha = 1;
       drawBird();
       drawGround();
+      for (const s of retroSparks) {
+        const alpha = Math.max(0, s.life / s.maxLife);
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.rotate(s.rot);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = s.color;
+        const r = s.size * (0.4 + alpha * 0.6);
+        ctx.beginPath();
+        ctx.moveTo(0, -r);
+        ctx.lineTo(r * .3, -r * .3);
+        ctx.lineTo(r, 0);
+        ctx.lineTo(r * .3, r * .3);
+        ctx.lineTo(0, r);
+        ctx.lineTo(-r * .3, r * .3);
+        ctx.lineTo(-r, 0);
+        ctx.lineTo(-r * .3, -r * .3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
       for (const ft of floatingTexts) {
         ctx.save();
         ctx.globalAlpha = Math.max(0, Math.min(1, ft.life / ft.maxLife));
@@ -1063,6 +1156,7 @@
         ctx.fillText(ft.text, ft.x, ft.y);
         ctx.restore();
       }
+      ctx.restore();
       if (hitFlash > 0) { ctx.fillStyle = `rgba(255,255,245,${hitFlash * 2})`; ctx.fillRect(0, 0, W, H); }
     }
 
