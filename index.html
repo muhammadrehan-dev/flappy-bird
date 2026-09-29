@@ -122,6 +122,102 @@
       .panel-copy { margin-bottom: 15px; }
     }
     .icon-button[aria-pressed="true"] { background: #e0eedf; color: #1e5948; border-color: #bcd0bd; }
+
+    /* Mobile & Desktop Fullscreen Mode */
+    body.mobile-fullscreen {
+      overflow: hidden !important;
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      background: #091311 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      touch-action: none !important;
+    }
+    body.mobile-fullscreen::before { display: none !important; }
+    body.mobile-fullscreen .shell {
+      max-width: none !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    body.mobile-fullscreen .site-header,
+    body.mobile-fullscreen .intro-column,
+    body.mobile-fullscreen .card-footer,
+    body.mobile-fullscreen .site-footer {
+      display: none !important;
+    }
+    body.mobile-fullscreen main {
+      display: flex !important;
+      flex-direction: column !important;
+      width: 100% !important;
+      height: 100% !important;
+      height: 100dvh !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    body.mobile-fullscreen .game-card {
+      width: 100% !important;
+      height: 100% !important;
+      height: 100dvh !important;
+      border: none !important;
+      border-radius: 0 !important;
+      padding: env(safe-area-inset-top, 6px) 8px env(safe-area-inset-bottom, 6px) !important;
+      box-shadow: none !important;
+      background: #091311 !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+    body.mobile-fullscreen .toolbar {
+      padding: 6px 12px !important;
+      background: #fffef7ee !important;
+      backdrop-filter: blur(8px) !important;
+      border-radius: 12px !important;
+      margin-bottom: 6px !important;
+      flex-shrink: 0 !important;
+    }
+    body.mobile-fullscreen .stage {
+      flex: 1 !important;
+      width: 100% !important;
+      height: 100% !important;
+      max-height: calc(100dvh - 66px) !important;
+      aspect-ratio: auto !important;
+      border-radius: 14px !important;
+      margin: 0 auto !important;
+    }
+    .exit-fullscreen-btn {
+      display: none;
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 40;
+      padding: 6px 11px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.45);
+      background: rgba(14,24,22,0.78);
+      color: #fffef2;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      backdrop-filter: blur(6px);
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: background 0.15s, transform 0.15s;
+    }
+    .exit-fullscreen-btn:hover { background: rgba(37,114,94,0.9); transform: translateY(-1px); }
+    .exit-fullscreen-btn:active { transform: translateY(1px); }
+    body.mobile-fullscreen .exit-fullscreen-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    body.mobile-fullscreen .state-tag {
+      top: 48px;
+    }
     /* Full Width Play Mode for Larger Screens */
     body.full-width-mode .shell { max-width: 1400px; padding: 18px 24px 20px; }
     body.full-width-mode main { display: flex; flex-direction: column-reverse; gap: 28px; padding: 14px 0; }
@@ -163,7 +259,7 @@
         <h2 class="how-title">The flight manual</h2>
         <div class="controls" id="instructions">
           <div class="control-row"><span class="keys"><kbd>Space</kbd><kbd>↑</kbd></span><span>Aim for skyscraper (no floor plants)</span></div>
-          <div class="control-row"><span class="keys"><kbd>F</kbd></span><span>Full width mode</span></div>
+          <div class="control-row"><span class="keys"><kbd>F</kbd></span><span>Toggle full screen</span></div>
           <div class="control-row"><span class="keys"><kbd>P</kbd></span><span>Pause your shame</span></div>
           <div class="control-row"><span class="keys"><kbd>R</kbd></span><span>Restart run</span></div>
         </div>
@@ -179,7 +275,13 @@
             <button type="button" class="icon-button" id="sound-button" aria-label="Mute sound" aria-pressed="true" title="Mute sound">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4Z"/><g id="sound-waves"><path d="M15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/></g><path id="sound-cross" d="M16 9l5 6m0-6l-5 6" hidden/></svg>
             </button>
-            <button type="button" class="icon-button" id="width-button" aria-label="Toggle full width mode" aria-pressed="false" title="Full width mode (F)">
+            <button type="button" class="icon-button" id="fullscreen-button" aria-label="Toggle full screen" aria-pressed="false" title="Full screen (F)">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path id="fs-expand" d="M3 8V3h5M21 8V3h-5M3 16v5h5M21 16v5h-5"/>
+                <path id="fs-compress" d="M8 3v5H3M16 3v5h5M8 21v-5H3M16 21v-5h5" hidden/>
+              </svg>
+            </button>
+            <button type="button" class="icon-button" id="width-button" aria-label="Toggle full width mode" aria-pressed="false" title="Full width mode">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <g id="expand-icon"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></g>
                 <g id="compress-icon" hidden><path d="M4 14h6v6M20 10h-6V4M10 14l-7 7M14 10l7-7"/></g>
@@ -193,8 +295,12 @@
             </button>
           </div>
         </div>
-        <div class="stage" id="stage" tabindex="0" role="group" aria-label="Flight area. Tap, click, Space, or Up Arrow to flap. P pauses; R restarts; F toggles full width.">
+        <div class="stage" id="stage" tabindex="0" role="group" aria-label="Flight area. Tap, click, Space, or Up Arrow to flap. P pauses; R restarts; F toggles full screen.">
           <canvas id="game" width="480" height="640" role="img" aria-label="Bird flying through gaps between obstacles in a cloudy sky">Use a browser with HTML canvas support to play this game.</canvas>
+          <button type="button" class="exit-fullscreen-btn" id="exit-fullscreen-btn" aria-label="Exit full screen">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            Exit
+          </button>
           <div class="location-tag" id="location-tag" aria-hidden="true">01 / METROPOLIS SKYLINE</div>
           <div class="state-tag" id="state-tag" aria-hidden="true">READY</div>
           <div class="overlay" id="overlay">
@@ -271,7 +377,7 @@
     let hitFlash = 0, overAt = 0;
     const bird = { x: CONFIG.birdX, y: 270, vy: 0, angle: 0 };
     function updateBirdX() {
-      bird.x = Math.round(Math.min(180, Math.max(CONFIG.birdX, W * 0.18)));
+      bird.x = Math.round(Math.min(180, Math.max(80, W * 0.22)));
     }
 
     function addFloatingText(text, x, y, color = '#ef4444', life = 1.6) {
@@ -402,25 +508,82 @@
     }
 
     // Missing SVGs are harmless: built-in artwork is used until you add them.
-    function loadAsset(path) {
+    // High-performance offscreen bitmap caches (eliminates mobile SVG rasterization lag)
+    let cachedObstacleCanvas = null;
+    let cachedFlippedObstacleCanvas = null;
+    let cachedBirdCanvas = null;
+
+    function buildObstacleCache() {
+      if (!obstacleAsset || !obstacleAsset.ready) return;
+      try {
+        const cw = 76, ch = 600;
+        cachedObstacleCanvas = document.createElement('canvas');
+        cachedObstacleCanvas.width = cw;
+        cachedObstacleCanvas.height = ch;
+        const octx = cachedObstacleCanvas.getContext('2d');
+        octx.drawImage(obstacleAsset.image, 0, 0, cw, ch);
+
+        cachedFlippedObstacleCanvas = document.createElement('canvas');
+        cachedFlippedObstacleCanvas.width = cw;
+        cachedFlippedObstacleCanvas.height = ch;
+        const fctx = cachedFlippedObstacleCanvas.getContext('2d');
+        fctx.save();
+        fctx.translate(0, ch);
+        fctx.scale(1, -1);
+        fctx.drawImage(obstacleAsset.image, 0, 0, cw, ch);
+        fctx.restore();
+      } catch {
+        cachedObstacleCanvas = null;
+        cachedFlippedObstacleCanvas = null;
+      }
+    }
+
+    function buildBirdCache() {
+      if (!birdAsset || !birdAsset.ready) return;
+      try {
+        const nw = birdAsset.image.naturalWidth || 800;
+        const nh = birdAsset.image.naturalHeight || 800;
+        const ratio = Math.min(CONFIG.birdWidth / nw, CONFIG.birdHeight / nh);
+        const w = Math.round(nw * ratio);
+        const h = Math.round(nh * ratio);
+
+        cachedBirdCanvas = document.createElement('canvas');
+        cachedBirdCanvas.width = w * 2;
+        cachedBirdCanvas.height = h * 2;
+        const bctx = cachedBirdCanvas.getContext('2d');
+        bctx.scale(2, 2);
+        bctx.drawImage(birdAsset.image, 0, 0, w, h);
+      } catch {
+        cachedBirdCanvas = null;
+      }
+    }
+
+    function loadAsset(path, onLoaded) {
       const image = new Image();
       const asset = { image, ready: false };
-      image.onload = () => { asset.ready = image.naturalWidth > 0 && image.naturalHeight > 0; };
+      image.onload = () => {
+        asset.ready = image.naturalWidth > 0 && image.naturalHeight > 0;
+        if (asset.ready && onLoaded) onLoaded();
+      };
       image.onerror = () => { asset.ready = false; };
       image.src = path;
       return asset;
     }
-    const birdAsset = loadAsset(CONFIG.birdImage);
-    const obstacleAsset = loadAsset(CONFIG.obstacleImage);
+    const birdAsset = loadAsset(CONFIG.birdImage, buildBirdCache);
+    const obstacleAsset = loadAsset(CONFIG.obstacleImage, buildObstacleCache);
 
     function resizeCanvas() {
       const rect = $('stage').getBoundingClientRect();
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const ratio = Math.min(window.devicePixelRatio || 1, window.innerWidth < 768 ? 1.5 : 2);
       const stageRatio = (rect.width > 0 && rect.height > 0) ? (rect.width / rect.height) : (isFullWidth ? (16 / 9) : (3 / 4));
-      W = Math.max(480, Math.round(H * stageRatio));
+      W = Math.max(360, Math.round(H * stageRatio));
       updateBirdX();
-      canvas.width = Math.round(W * ratio);
-      canvas.height = Math.round(H * ratio);
+      const targetW = Math.round(W * ratio);
+      const targetH = Math.round(H * ratio);
+      if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+      }
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       if (state === 'ready') seedObstacles();
     }
@@ -534,6 +697,11 @@
     }
     function startGame() {
       unlockAudio();
+      // On mobile/touch devices, automatically launch full-screen for an immersive experience!
+      const isMobile = window.innerWidth <= 820 || ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+      if (isMobile && !isFullscreenActive()) {
+        enterFullScreen();
+      }
       state = 'playing';
       score = 0;
       particles = [];
@@ -807,12 +975,18 @@
     }
     function drawObstacle(x, y, w, h, top) {
       if (h <= 0) return;
-      if (!obstacleAsset.ready) { drawFallbackObstacle(x, y, w, h, top); return; }
-      ctx.save();
-      ctx.translate(x, top && CONFIG.flipTopObstacle ? y + h : y);
-      if (top && CONFIG.flipTopObstacle) ctx.scale(1, -1);
-      ctx.drawImage(obstacleAsset.image, 0, 0, w, h);
-      ctx.restore();
+      if (!cachedObstacleCanvas && obstacleAsset.ready) buildObstacleCache();
+      if (cachedObstacleCanvas) {
+        const src = (top && CONFIG.flipTopObstacle) ? cachedFlippedObstacleCanvas : cachedObstacleCanvas;
+        if (top && CONFIG.flipTopObstacle) {
+          const sy = Math.max(0, 600 - h);
+          ctx.drawImage(src, 0, sy, 76, Math.min(600, h), x, y, w, h);
+        } else {
+          ctx.drawImage(src, 0, 0, 76, Math.min(600, h), x, y, w, h);
+        }
+        return;
+      }
+      drawFallbackObstacle(x, y, w, h, top);
     }
     function drawGround() {
       ctx.fillStyle = '#739663'; ctx.fillRect(0, FLOOR, W, 4);
@@ -833,10 +1007,11 @@
     }
     function drawBird() {
       ctx.save(); ctx.translate(bird.x, bird.y); ctx.rotate(bird.angle);
-      if (birdAsset.ready) {
-        const ratio = Math.min(CONFIG.birdWidth / birdAsset.image.naturalWidth, CONFIG.birdHeight / birdAsset.image.naturalHeight);
-        const width = birdAsset.image.naturalWidth * ratio, height = birdAsset.image.naturalHeight * ratio;
-        ctx.drawImage(birdAsset.image, -width / 2, -height / 2, width, height);
+      if (!cachedBirdCanvas && birdAsset.ready) buildBirdCache();
+      if (cachedBirdCanvas) {
+        const w = cachedBirdCanvas.width / 2;
+        const h = cachedBirdCanvas.height / 2;
+        ctx.drawImage(cachedBirdCanvas, -w / 2, -h / 2, w, h);
       } else {
         ctx.fillStyle = '#d7a446';
         ctx.beginPath(); ctx.moveTo(-15, -1); ctx.lineTo(-28, -9); ctx.lineTo(-25, 5); ctx.lineTo(-12, 9); ctx.closePath(); ctx.fill();
@@ -856,7 +1031,6 @@
       ctx.restore();
     }
     function draw() {
-      ctx.clearRect(0, 0, W, H);
       drawBackground();
       for (const obstacle of obstacles) {
         const top = obstacle.center - obstacle.gap / 2;
@@ -886,12 +1060,12 @@
       if (hitFlash > 0) { ctx.fillStyle = `rgba(255,255,245,${hitFlash * 2})`; ctx.fillRect(0, 0, W, H); }
     }
 
-    // Fixed physics steps make game speed independent of monitor refresh rate.
-    const STEP = 1 / 120;
+    // 60Hz physics step: rock-solid 60 FPS, prevents mobile lag accumulation loops
+    const STEP = 1 / 60;
     function frame(time) {
       const dt = lastTime === null ? 0 : Math.min((time - lastTime) / 1000, .05);
       lastTime = time;
-      accumulator += dt;
+      accumulator = Math.min(accumulator + dt, STEP * 2);
       while (accumulator >= STEP) { update(STEP); accumulator -= STEP; }
       draw();
       requestAnimationFrame(frame);
@@ -919,6 +1093,55 @@
       inputFlap();
     }
 
+    // Fullscreen controls
+    function isFullscreenActive() {
+      return document.body.classList.contains('mobile-fullscreen') || !!(document.fullscreenElement || document.webkitFullscreenElement);
+    }
+
+    function enterFullScreen() {
+      document.body.classList.add('mobile-fullscreen');
+      const docEl = document.documentElement;
+      const rfs = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+      if (rfs) {
+        try { rfs.call(docEl).catch(() => {}); } catch {}
+      }
+      syncFullscreenButton();
+      setTimeout(resizeCanvas, 40);
+      setTimeout(resizeCanvas, 180);
+    }
+
+    function exitFullScreen() {
+      document.body.classList.remove('mobile-fullscreen');
+      const efs = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+      if (efs && (document.fullscreenElement || document.webkitFullscreenElement)) {
+        try { efs.call(document).catch(() => {}); } catch {}
+      }
+      syncFullscreenButton();
+      setTimeout(resizeCanvas, 40);
+      setTimeout(resizeCanvas, 180);
+    }
+
+    function toggleFullScreen() {
+      if (isFullscreenActive()) exitFullScreen();
+      else enterFullScreen();
+    }
+
+    function syncFullscreenButton() {
+      const active = isFullscreenActive();
+      const btn = $('fullscreen-button');
+      if (btn) {
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        btn.title = active ? 'Exit full screen (F)' : 'Full screen (F)';
+        const exp = $('fs-expand');
+        const comp = $('fs-compress');
+        if (exp) exp.hidden = active;
+        if (comp) comp.hidden = !active;
+      }
+    }
+
+    document.addEventListener('fullscreenchange', syncFullscreenButton);
+    document.addEventListener('webkitfullscreenchange', syncFullscreenButton);
+
     // Attach with { passive: false } to reliably allow event.preventDefault() on touch devices
     window.addEventListener('pointerdown', handleFlapTap, { passive: false });
     window.addEventListener('touchstart', handleFlapTap, { passive: false });
@@ -932,6 +1155,14 @@
     });
     window.addEventListener('dragstart', e => e.preventDefault());
 
+    $('exit-fullscreen-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      exitFullScreen();
+    });
+    $('fullscreen-button').addEventListener('click', () => {
+      toggleFullScreen();
+      $('fullscreen-button').blur();
+    });
     $('play-button').addEventListener('click', (e) => {
       e.stopPropagation();
       unlockAudio();
@@ -956,7 +1187,8 @@
         if (event.repeat) return;
         if (isFlap) inputFlap();
         else if (event.code === 'KeyR') startGame();
-        else if (event.code === 'KeyF') toggleFullWidth();
+        else if (event.code === 'KeyF') toggleFullScreen();
+        else if (event.code === 'Escape') exitFullScreen();
         else setPaused(state === 'playing');
       }
     });
