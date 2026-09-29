@@ -320,7 +320,7 @@
         <div class="card-footer"><span><i class="footer-dot"></i>Hit Skyscraper on 0 = Glory 🏆</span><span>Hit Ground = Mocked · Pass = Shame</span></div>
       </section>
     </main>
-    <footer class="site-footer"><span>Copyright &copy; ch4_ezio 2005 to 2026</span><span>Stay light. Keep flying.</span></footer>
+    <footer class="site-footer"><span>Copyright &copy; Uncle Osama (Sep 2011 - till ) </span><span>Stay light. Keep flying.</span></footer>
   </div>
   <p class="sr-only" id="announcer" role="status" aria-live="polite"></p>
 
@@ -677,12 +677,15 @@
     }
     function seedObstacles() {
       obstacles = [];
-      let startX = bird.x + 360;
+      let startX = bird.x + 220;
       let isFirst = true;
-      while (startX <= W + 40) {
+      while (startX <= W + CONFIG.obstacleSpacing) {
         addObstacle(startX, isFirst);
         startX += CONFIG.obstacleSpacing;
         isFirst = false;
+      }
+      if (obstacles.length === 0) {
+        addObstacle(Math.max(260, bird.x + 200), true);
       }
     }
     function flap() {
@@ -880,8 +883,12 @@
           addFloatingText(tag, bird.x + 10, bird.y - 14, '#ef4444', 1.6);
         }
       }
-      const last = obstacles[obstacles.length - 1];
-      if (last && last.x <= W + 35 - CONFIG.obstacleSpacing) addObstacle(last.x + CONFIG.obstacleSpacing);
+      if (obstacles.length === 0) {
+        addObstacle(W + 50, true);
+      } else {
+        const last = obstacles[obstacles.length - 1];
+        if (last && last.x <= W + 50) addObstacle(last.x + CONFIG.obstacleSpacing);
+      }
       obstacles = obstacles.filter(o => o.x + CONFIG.obstacleWidth > -10);
     }
 
@@ -976,14 +983,13 @@
     function drawObstacle(x, y, w, h, top) {
       if (h <= 0) return;
       if (!cachedObstacleCanvas && obstacleAsset.ready) buildObstacleCache();
-      if (cachedObstacleCanvas) {
-        const src = (top && CONFIG.flipTopObstacle) ? cachedFlippedObstacleCanvas : cachedObstacleCanvas;
-        if (top && CONFIG.flipTopObstacle) {
-          const sy = Math.max(0, 600 - h);
-          ctx.drawImage(src, 0, sy, 76, Math.min(600, h), x, y, w, h);
-        } else {
-          ctx.drawImage(src, 0, 0, 76, Math.min(600, h), x, y, w, h);
-        }
+      const img = cachedObstacleCanvas || (obstacleAsset.ready ? obstacleAsset.image : null);
+      if (img) {
+        ctx.save();
+        ctx.translate(x, top && CONFIG.flipTopObstacle ? y + h : y);
+        if (top && CONFIG.flipTopObstacle) ctx.scale(1, -1);
+        ctx.drawImage(img, 0, 0, w, h);
+        ctx.restore();
         return;
       }
       drawFallbackObstacle(x, y, w, h, top);
