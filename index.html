@@ -2,16 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#f7f7ef">
   <title>Qaeda Bird · A little 9/11 break</title>
   <style>
     :root { color-scheme: light; --ink: #223b39; --muted: #72817b; --paper: #f7f7ef; --green: #25725e; }
-    * { box-sizing: border-box; }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    ::selection { background: transparent; }
+    ::-moz-selection { background: transparent; }
+    html, body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: ui-rounded, "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
+      overscroll-behavior: none;
+    }
+    .game-card, .stage, canvas, .overlay, .panel {
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
     [hidden] { display: none !important; }
-    body { margin: 0; background: var(--paper); color: var(--ink); font-family: ui-rounded, "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif; }
     body::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .28; background-image: radial-gradient(#a9b9ab .75px, transparent .75px); background-size: 18px 18px; }
-    button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
     button:focus-visible, .stage:focus-visible { outline: 3px solid #d49d37; outline-offset: 5px; }
     button:disabled { opacity: .35; cursor: default; }
     .shell { position: relative; max-width: 1080px; margin: auto; padding: 28px 36px 24px; }
@@ -187,7 +214,7 @@
         <div class="card-footer"><span><i class="footer-dot"></i>Hit Skyscraper on 0 = Glory 🏆</span><span>Hit Ground = Mocked · Pass = Shame</span></div>
       </section>
     </main>
-    <footer class="site-footer"><span>Copyright &copy; Uncle Osama Sep-2001  to lets see</span><span>Stay light. Keep flying.</span></footer>
+    <footer class="site-footer"><span>Copyright &copy; ch4_ezio 2005 to 2026</span><span>Stay light. Keep flying.</span></footer>
   </div>
   <p class="sr-only" id="announcer" role="status" aria-live="polite"></p>
 
@@ -870,13 +897,43 @@
       requestAnimationFrame(frame);
     }
 
-    $('stage').addEventListener('pointerdown', event => {
-      if (event.target.closest('button') || (event.pointerType === 'mouse' && event.button !== 0) || !event.isPrimary) return;
-      event.preventDefault();
+    // Robust mobile tap & flap handling (prevents text selection, zoom, and callout overlays)
+    let lastTapTime = 0;
+    function handleFlapTap(event) {
+      if (event.target.closest('button')) return;
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      if (event.isPrimary === false) return;
+
+      const isTargetOnGame = event.target.closest('#stage') || event.target.closest('.game-card') || event.target.closest('#overlay');
+      if (state !== 'playing' && !isTargetOnGame) return;
+
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+
+      const now = performance.now();
+      if (now - lastTapTime < 45) return;
+      lastTapTime = now;
+
       $('stage').focus({ preventScroll: true });
       inputFlap();
+    }
+
+    // Attach with { passive: false } to reliably allow event.preventDefault() on touch devices
+    window.addEventListener('pointerdown', handleFlapTap, { passive: false });
+    window.addEventListener('touchstart', handleFlapTap, { passive: false });
+
+    // Block mobile context menus (long-press callout menu) and drag/selection events
+    window.addEventListener('contextmenu', e => {
+      if (!e.target.closest('input, textarea')) e.preventDefault();
     });
-    $('play-button').addEventListener('click', () => {
+    document.addEventListener('selectstart', e => {
+      if (!e.target.closest('input, textarea')) e.preventDefault();
+    });
+    window.addEventListener('dragstart', e => e.preventDefault());
+
+    $('play-button').addEventListener('click', (e) => {
+      e.stopPropagation();
       unlockAudio();
       if (state === 'paused') setPaused(false);
       else startGame();
